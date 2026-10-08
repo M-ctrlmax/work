@@ -3,9 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>home</title>
+    <title>Team Scoreboard</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #19233b;
+            --muted: #77819a;
+            --panel: rgba(255, 255, 255, 0.9);
+            --line: #e8ebf3;
+            --blue: #536dfe;
+            --blue-dark: #3c54df;
+            --rose: #f05d78;
+            --rose-dark: #d94764;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 32px 20px;
+            display: grid;
+            place-items: center;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                repeating-linear-gradient(90deg, transparent 0 118px, rgba(130, 83, 39, .09) 119px 121px),
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, .16) 0 2px, transparent 2px 42px),
+                linear-gradient(180deg, #dceafa 0%, #edf3f8 29%, #e8c58d 29%, #d6a86e 100%);
+            isolation: isolate;
+        }
+
+        /* Court boundary, center line and center circle */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 32% 4% 4%;
+            z-index: 0;
+            border: 3px solid rgba(255, 255, 255, .48);
+            border-radius: 24px;
+            background:
+                linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,.4) calc(50% - 1px) 50%, transparent 50%),
+                radial-gradient(circle at 50% 50%, transparent 0 70px, rgba(255,255,255,.42) 71px 74px, transparent 75px);
+            pointer-events: none;
+        }
+
+        /* Shareball-inspired ball detail */
+        body::after {
+            content: "";
+            position: fixed;
+            right: 7%;
+            bottom: 7%;
+            z-index: 0;
+            width: clamp(76px, 11vw, 138px);
+            aspect-ratio: 1;
+            border: 3px solid rgba(126, 67, 28, .24);
+            border-radius: 50%;
+            opacity: .38;
+            background:
+                linear-gradient(90deg, transparent 47%, rgba(126,67,28,.3) 48% 50%, transparent 51%),
+                linear-gradient(35deg, transparent 47%, rgba(126,67,28,.3) 48% 50%, transparent 51%),
+                radial-gradient(circle at 35% 30%, #ffd486, #f28a3f 68%, #d96b32);
+            pointer-events: none;
+        }
+
+        .scoreboard {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 760px);
+            padding: clamp(24px, 5vw, 44px);
+            border: 1px solid rgba(255, 255, 255, .8);
+            border-radius: 28px;
+            background: var(--panel);
+            box-shadow: 0 24px 70px rgba(38, 52, 99, .12);
+            backdrop-filter: blur(12px);
+            animation: enter .55s ease-out both;
+        }
+
+        .heading { margin-bottom: 30px; text-align: center; }
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--blue);
+            font-size: .75rem;
+            font-weight: 800;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+        }
+        h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); letter-spacing: -.045em; }
+        .subtitle { margin: 9px 0 0; color: var(--muted); font-size: .98rem; }
+
+        .teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .team-card {
+            --team: var(--blue);
+            --team-dark: var(--blue-dark);
+            padding: 24px;
+            overflow: hidden;
+            text-align: center;
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            background: linear-gradient(145deg, #fff, #f8f9ff);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .team-card.team-b { --team: var(--rose); --team-dark: var(--rose-dark); background: linear-gradient(145deg, #fff, #fff7f8); }
+        .team-card:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(38, 52, 99, .09); }
+        .team-name { margin: 0; color: var(--muted); font-size: .86rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+        .score {
+            margin: 8px 0 18px;
+            color: var(--team);
+            font-size: clamp(4.2rem, 11vw, 6.2rem);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -.08em;
+            font-variant-numeric: tabular-nums;
+        }
+        .controls { display: flex; justify-content: center; gap: 10px; }
+        button {
+            min-height: 44px;
+            padding: 0 17px;
+            border: 0;
+            border-radius: 12px;
+            color: white;
+            background: var(--team);
+            font: inherit;
+            font-size: .92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+        }
+        button:hover { background: var(--team-dark); box-shadow: 0 6px 14px color-mix(in srgb, var(--team) 24%, transparent); transform: translateY(-1px); }
+        button:active { transform: translateY(1px) scale(.98); }
+        button:focus-visible { outline: 3px solid color-mix(in srgb, var(--team) 35%, white); outline-offset: 3px; }
+        .secondary {
+            width: 44px;
+            padding: 0;
+            color: var(--team);
+            border: 1px solid color-mix(in srgb, var(--team) 20%, white);
+            background: white;
+            font-size: 1.2rem;
+        }
+        .secondary:hover { color: white; }
+
+        .footer { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+        .result {
+            flex: 1;
+            min-height: 54px;
+            display: grid;
+            place-items: center;
+            padding: 12px 16px;
+            color: var(--muted);
+            border: 1px dashed #d9deeb;
+            border-radius: 14px;
+            background: #fafbfe;
+            font-weight: 750;
+            text-align: center;
+        }
+        .reset {
+            min-width: 112px;
+            color: #59647d;
+            border: 1px solid var(--line);
+            background: white;
+        }
+        .reset:hover { color: var(--ink); background: #f1f3f9; box-shadow: none; }
+
+        @keyframes enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 560px) {
+            body { padding: 18px 14px; }
+            .scoreboard { padding: 24px 18px; border-radius: 22px; }
+            .teams { grid-template-columns: 1fr; gap: 12px; }
+            .team-card { padding: 20px 16px; }
+            .score { margin: 6px 0 14px; font-size: 4.5rem; }
+            .footer { align-items: stretch; flex-direction: column; }
+            .reset { width: 100%; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
+    </style>
 </head>
 <body>
-    <h1>hello</h1>
+    <main class="scoreboard">
+        <header class="heading">
+            <p class="eyebrow">20-คะแนน</p>
+            <h1>แข่งขันแชร์บอล</h1>
+            <p class="subtitle">ใครถึง 18 คะแนนก่อนชนะ</p>
+        </header>
+
+        <section class="teams" aria-label="Team scores">
+            <article class="team-card team-a">
+                <h2 class="team-name">Team A</h2>
+                <div class="score" id="show" aria-live="polite"></div>
+                <div class="controls">
+                    <button type="button" class="secondary" onclick="minus()" aria-label="Subtract one point from Team A">−</button>
+                    <button type="button" onclick="add()">Add point</button>
+                </div>
+            </article>
+
+            <article class="team-card team-b">
+                <h2 class="team-name">Team B</h2>
+                <div class="score" id="sar" aria-live="polite"></div>
+                <div class="controls">
+                    <button type="button" class="secondary" onclick="nas()" aria-label="Subtract one point from Team B">−</button>
+                    <button type="button" onclick="na()">Add point</button>
+                </div>
+            </article>
+        </section>
+
+        <footer class="footer">
+            <div class="result" id="result" aria-live="polite">ใครถึง 18 คะแนนก่อนชนะ</div>
+            <button type="button" class="reset" onclick="reset()">Reset match</button>
+        </footer>
+    </main>
+
+    <script>
+        const winningScore = 18;
+        const maxScore = 20;
+        let x = 0;
+        let y = 0;
+        let matchOver = false;
+
+        function add(){
+            if (x >= maxScore) return;
+            x = Math.min(x + 1, maxScore);
+            show();
+            check();
+        }
+        function minus(){
+            if (x <= 0) return;
+            x--;
+            show();
+        }
+        function show(){
+            document.getElementById('show').innerHTML = x;
+        }
+        show();
+        function na(){
+            if (y >= maxScore) return;
+            y = Math.min(y + 1, maxScore);
+            sar();
+            check();
+        }
+        function nas(){
+            if (y <= 0) return;
+            y--;
+            sar();
+        }
+        function sar(){
+            document.getElementById('sar').innerHTML = y;
+        }
+        function check(){
+            if (matchOver || (x < winningScore && y < winningScore)) return;
+            matchOver = true;
+            document.getElementById('result').innerHTML = x >= winningScore ? 'Team A Wins!' : 'Team B Wins!';
+        }
+        function reset(){
+            x=0;
+            y=0;
+            matchOver=false;
+            show();
+            sar();
+            document.getElementById('result').innerHTML = 'ใครถึง 18 คะแนนก่อนชนะ';
+        }
+        sar();
+    </script>
 </body>
 </html>
